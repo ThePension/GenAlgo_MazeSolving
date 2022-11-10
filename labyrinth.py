@@ -57,7 +57,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     
     start_time = time.time() # Start timer - Used to keep track of the elapsed time
 
-    population_size = 100
+    population_size = 200
     # Longest path possible is the number of cells in the grid / 2
     h, w = grid.shape
     adn_size = round(w * h * 2)
@@ -87,7 +87,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
         if (ind.fitness < best_ind.fitness):
             best_ind = ind
 
-        print("Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness))
+        # print("Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness))
 
         # ------------------------------------------
         #
@@ -119,22 +119,20 @@ def compute_generation(population:list[Individual], grid:np.ndarray, target:tupl
             offspring.append(parent2.clone())
 
     for ind in offspring:
-        if randint(0, 100) < mating_rate * 100:
+        if randint(0, 100) < mutation_rate * 100:
             ind.mutate(gene_mutation_rate)
             
         ind.compute_fitness(target)
-        print("Fitness: " + str(ind.fitness))
 
-    # population[:] = bests + offspring
     population = bests + offspring
 
     # shuffle the population to improve diversity
-    # np.random.shuffle(population)
+    np.random.shuffle(population)
 
     # Get the 5 best individuals
     bestPaths = selection(population, 5)
 
-    [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
+    # [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
 
     return bestPaths[0].clone(), population # return the best individual
     
@@ -147,21 +145,25 @@ def crossover(parent1 : Individual, parent2 : Individual) -> tuple[Individual, I
     adn_parent2 = parent2.clone().adn
 
     crossing_point = round(len(adn_parent1) / 2)
-
-    # adn_child1 = adn_parent1[crossing_point:] + adn_parent2[:crossing_point]
-    # adn_child2 = adn_parent1[crossing_point:] + adn_parent1[:crossing_point]
     
-    adn_child1 = []
-    adn_child2 = []
+    # V1
+    adn_child1 = adn_parent1[crossing_point:] + adn_parent2[:crossing_point]
+    adn_child2 = adn_parent1[crossing_point:] + adn_parent1[:crossing_point]
+    # END V1
+    
+    # V2
+    # adn_child1 = []
+    # adn_child2 = []
 
-    for i in range(0, len(adn_parent1)):
-        if randint(0, 1) == 0:
-            adn_child1.append(adn_parent1[i])
-            adn_child2.append(adn_parent2[i])
-        else:
-            adn_child1.append(adn_parent2[i])
-            adn_child2.append(adn_parent1[i])
-
+    # for i in range(0, len(adn_parent1)):
+    #     if randint(0, 1) == 0:
+    #         adn_child1.append(adn_parent1[i])
+    #         adn_child2.append(adn_parent2[i])
+    #     else:
+    #         adn_child1.append(adn_parent2[i])
+    #         adn_child2.append(adn_parent1[i])
+    # END V2
+    
     child1 = Individual(parent1.init_cell, adn_child1, parent1.maze)
     child2 = Individual(parent1.init_cell, adn_child2, parent1.maze)
 
@@ -177,8 +179,6 @@ if __name__ == "__main__":
     w = grid.shape[1]
     end = (h - 1, w - 1)
         
-    best_path = solve_labyrinth(grid, start, end, 3)
+    best_path = solve_labyrinth(grid, start, end, 10)
 
     print(best_path)
-
-    # display_labyrinth(grid, start, end, path)
