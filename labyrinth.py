@@ -57,7 +57,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     
     start_time = time.time() # Start timer - Used to keep track of the elapsed time
 
-    population_size = 200
+    population_size = 50
     # Longest path possible is the number of cells in the grid / 2
     h, w = grid.shape
     adn_size = round(w * h * 2)
@@ -71,7 +71,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     best_ind = population[0] # Keep track of the best path found for the moment
 
     while(True):
-        # ------------------------------------------
+        # -----------------------------------------
         #
         # Compute the next generation
         #
@@ -87,7 +87,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
         if (ind.fitness < best_ind.fitness):
             best_ind = ind
 
-        # print("Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness))
+        # print("NPOP : " + str(len(population)) + " | Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness))
 
         # ------------------------------------------
         #
@@ -100,12 +100,12 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     return best_ind.extract_partial_path(end_cell)
 
 def compute_generation(population:list[Individual], grid:np.ndarray, target:tuple, mutation_rate : float, mating_rate : float, gene_mutation_rate : float, ellitiste_mutation_rate : float = 0) -> Individual:
+    ellitiste_number = round(ellitiste_mutation_rate * len(population))
+
+    bests = population[:ellitiste_number:]
+    population = population[ellitiste_number::]
+    
     offspring = selection(population, int(len(population) / 2))
-
-    ellitiste_number = round(ellitiste_mutation_rate * len(offspring))
-
-    bests = offspring[:ellitiste_number:]
-    offspring = offspring[ellitiste_number::]
 
     offspring = [ind.clone() for ind in offspring]
 
@@ -169,16 +169,36 @@ def crossover(parent1 : Individual, parent2 : Individual) -> tuple[Individual, I
 
     return child1, child2   
 
+def random_maze(w : int, h : int, wall_ratio : float) -> np.ndarray:
+    maze = np.zeros((h, w), dtype=int)
+    for i in range(0, h):
+        for j in range(0, w):
+            if np.random.rand() < wall_ratio:
+                maze[i, j] = 1
+    return maze
+
 if __name__ == "__main__":
     import numpy as np
 
-    file = "grid10.npy"
-    grid = np.load(file)
-    start = (0, 0)
-    h = grid.shape[0]
-    w = grid.shape[1]
-    end = (h - 1, w - 1)
+    # file = "grid10.npy"
+    # grid = np.load(file)
+    # start = (0, 0)
+    # h = grid.shape[0]
+    # w = grid.shape[1]
+    # end = (h - 1, w - 1)
         
-    best_path = solve_labyrinth(grid, start, end, 10)
+    # best_path = solve_labyrinth(grid, start, end, 5)
 
-    print(best_path)
+    # print(best_path)
+    
+    size = 15
+    init_cell = (0, 0)
+    dest_cell = (size - 1, size - 1)
+    time_s = 15
+    
+    m = random_maze(size, size, 0.2)
+
+    path = solve_labyrinth(m, init_cell, dest_cell, time_s)
+    
+    print("Path length : " + str(len(path)))
+    print(path)

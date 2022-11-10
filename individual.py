@@ -62,8 +62,10 @@ class Individual():
         # If the ind reached the target
         if target in path:
             return path[:path.index(target) + 1]
+        
+        closest_cell = min(path, key = lambda cell : math.sqrt((cell[0] - target[0]) ** 2 + (cell[1] - target[1]) ** 2))
 
-        return path
+        return path[:path.index(closest_cell) + 1]
  
 
     def compute_fitness(self, target : tuple[int, int]):
@@ -74,27 +76,16 @@ class Individual():
             # Get the path to the target
             path_to_target = path[:path.index(target)]
 
-            # If this path is valid
-            if Individual.isPathValid(path_to_target, self.maze):
-                # The fitness is the number of steps to reach the target
-                self.fitness = len(path_to_target)
-            else:
-                # The fitness is the number of steps to reach the target + the number of invalid steps
-                self.fitness = len(path_to_target) + len([cell for cell in path_to_target if Individual.isPathValid([cell], self.maze) == False])
+            # The fitness is the number of steps to reach the target
+            self.fitness = len(path_to_target)
+            
         # If the ind didn't reach the target
         else:
-            # Get the closest cell to the target
-            closest_cell = min(path, key = lambda cell : math.sqrt((cell[0] - target[0]) ** 2 + (cell[1] - target[1]) ** 2))
+            # Fitness is the number of steps to reach the closest cell to the target (which is the last one in the path)
+            self.fitness = len(path)
 
-            # Fitness is the number of steps to reach the closest cell to the target
-            self.fitness = path.index(closest_cell)
-
-            # Fitness is the number of steps to reach the closest cell to the target + the distance to the target
-            self.fitness += math.sqrt((closest_cell[0] - target[0]) ** 2 + (closest_cell[1] - target[1]) ** 2) * 5
-
-            # Fitness is the number of steps to reach the closest cell to the target + the distance to the target + the number of invalid steps
-            self.fitness += len([cell for cell in path if Individual.isPathValid([cell], self.maze) == False])
-            
+            # + the distance to the target
+            self.fitness += math.sqrt((path[-1][0] - target[0]) ** 2 + (path[-1][1] - target[1]) ** 2) * 10
 
     def compute_complete_path(self):
         prev_cell =  self.init_cell
