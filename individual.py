@@ -1,0 +1,153 @@
+from copy import deepcopy
+from random import randint
+import numpy as np
+import math
+
+class Individual():
+    def __init__(self, init_x, init_y, adn = [], maze = [[]]):
+        self.adn = adn
+        self.x = init_x
+        self.y = init_y
+        self.fitness = 0
+        self.maze = maze
+        self.target_reached = False
+
+    @staticmethod
+    def isPathValid(path, maze):
+        for cx, cy in path:
+            # Check up and left boundaries
+            if cx < 0 or cy < 0:
+                return False
+            
+            # Check down and right boundaries
+            if cx >= len(maze) or cy >= len(maze[0]):
+                return False
+
+            # Check it has hit a wall
+            if maze[cx][cy] == 1:
+                return False
+            
+        return True
+
+    @staticmethod
+    def nb_wall_hit(path, maze):
+        nb_wall_hit = 0
+
+        for cx, cy in path:
+            if maze[cx][cy] == 1:
+                nb_wall_hit += 1
+
+        return nb_wall_hit
+
+    @staticmethod
+    def randomIndividual(init_x : int, init_y : int, adn_size : int, maze : np.ndarray):
+        random_adn = [randint(0, 3) for i in range(0, adn_size)]    
+
+        return Individual(init_x, init_y, random_adn, maze)
+
+    def clone(self):
+        return Individual(self.x, self.y, deepcopy(self.adn), self.maze)
+
+    def mutate(self, gene_mutation_rate):
+        for i in range(0, len(self.adn)):
+            if randint(0, 100) < gene_mutation_rate * 100:
+                self.adn[i] = (self.adn[i] + randint(-1, 1)) % 4
+
+    def extract_partial_valid_path(self, target : tuple[int, int]) -> list[tuple[int, int]]:
+        path = self.compute_complete_path()
+
+        init_cell = (0, 0)
+
+        if target in path:
+            # Get the index of the last initial cell in the path (must be before the first target in path)
+            last_init_cell_index = path.index(init_cell, 0, path.index(target) + 1)
+            print("last_init_cell_index ", last_init_cell_index)
+
+            # Extract the path from the target to the initial cell
+            extracted_path = path[last_init_cell_index : path.index(target) + 1]
+
+            return extracted_path
+
+        return path
+        
+
+    def compute_fitness(self, target : tuple[int, int]):
+        path = self.compute_complete_path()
+
+        # If the ind reached the target
+        if target in path:
+            # # Get the shortest path from the initial cell to the target
+            # shortest_path = self.extract_partial_valid_path(target)
+
+            # # Fitness is the number of steps to reach the target
+            # self.fitness = shortest_path.index(target)
+            self.fitness = path.index(target)
+            return
+
+        # Get the closest cell to the target
+        closest_cell = min(path, key = lambda cell : math.sqrt((cell[0] - target[0]) ** 2 + (cell[1] - target[1]) ** 2))
+
+        # Fitness is the number of steps to reach the closest cell to the target
+        self.fitness = path.index(closest_cell)
+
+        # Fitness is the number of steps to reach the closest cell to the target + the distance to the target
+        self.fitness += math.sqrt((closest_cell[0] - target[0]) ** 2 + (closest_cell[1] - target[1]) ** 2) * 5
+
+        # if target in path:
+        #     extracted_path = self.extract_best_path(target)
+
+        #     if Individual.isPathValid(extracted_path, self.maze):
+        #         # Fitness is the number of steps to reach the target
+        #         self.fitness = extracted_path.index(target)
+        #         return
+
+        # if not Individual.isPathValid(path, self.maze):
+        #     self.fitness = 100000
+        #     return
+
+        # # Get the closest cell to the target
+        # closest_cell_x, closest_cell_y = min(path, key=lambda x: math.sqrt((x[0] - target[0]) ** 2 + (x[1] - target[1]) ** 2))
+
+        # target_x, target_y = target
+
+        # nb_wall_hit = Individual.nb_wall_hit(path, self.maze)
+
+        # self.fitness = (abs(closest_cell_x - target_x) + abs(closest_cell_y - target_y)) * 100 + nb_wall_hit * 100
+
+        # if target in path:
+        #     self.fitness = path.index(target)
+        # else:
+        #     closest_cell_x, closest_cell_y = min(path, key=lambda x: math.sqrt((x[0] - target[0]) ** 2 + (x[1] - target[1]) ** 2))
+        #     manhattan_dist = (math.sqrt((closest_cell_x - target[0]) ** 2 + (closest_cell_y - target[1]) ** 2)) * 100
+        #     self.fitness = manhattan_dist
+
+        # final_cell = path[-1]
+
+        # manhattan_dist = (math.sqrt((final_cell[0] - target[0]) ** 2 + (final_cell[1] - target[1]) ** 2)) * 100
+
+        # self.fitness = manhattan_dist
+
+
+    def compute_complete_path(self):
+        prev_cell = (0, 0)
+        next_cell = (0, 0)
+        path = [prev_cell]
+
+        for move in self.adn:
+            if move == 0:
+                next_cell = (prev_cell[0] - 1, prev_cell[1])
+            elif move == 1:
+                next_cell = (prev_cell[0] + 1, prev_cell[1])
+            elif move == 2:
+                next_cell = (prev_cell[0], prev_cell[1] - 1)
+            elif move == 3:
+                next_cell = (prev_cell[0], prev_cell[1] + 1)
+
+            path.append(next_cell)
+            prev_cell = next_cell
+
+        return path
+
+
+    def compute_complete_valid_path(self) -> list[tuple[int, int]]:
+        return [move for move in self.compute_complete_path() if Individual.isPathValid([move], self.maze)]
