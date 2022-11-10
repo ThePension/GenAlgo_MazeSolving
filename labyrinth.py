@@ -93,11 +93,13 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
         if time.time() - start_time >= max_time_s:
             break
 
-    return best_ind.extract_partial_valid_path(end_cell)
+    return best_ind.extract_partial_path(end_cell)
 
-def compute_generation(population:list[Individual], grid:np.ndarray, target:tuple, mutation_rate : float, mating_rate : float, gene_mutation_rate : float, gen_count = 0) -> Individual:
+def compute_generation(population:list[Individual], grid:np.ndarray, target:tuple, mutation_rate : float, mating_rate : float, gene_mutation_rate : float, ellitiste_mutation_rate : float, gen_count = 0) -> Individual:
     gen_count += 1
     offspring = selection(population, int(len(population) / 2))
+
+    bests = offspring[round(ellitiste_mutation_rate * len(population))]
 
     for ind in offspring:
         ind.clone()
@@ -137,10 +139,10 @@ def crossover(parent1 : Individual, parent2 : Individual) -> tuple[Individual, I
     adn_parent1 = parent1.clone().adn
     adn_parent2 = parent2.clone().adn
 
-    crossing_point = len(adn_parent1)
+    crossing_point = (len(adn_parent1) / 2)
 
-    adn_child1 = [] # adn_parent1[crossing_point:] + adn_parent2[:crossing_point]
-    adn_child2 = [] # adn_parent1[crossing_point:] + adn_parent1[:crossing_point]
+    adn_child1 = adn_parent1[crossing_point:] + adn_parent2[:crossing_point]
+    adn_child2 = adn_parent1[crossing_point:] + adn_parent1[:crossing_point]
 
     for i in range(0, len(adn_parent1)):
         if randint(0, 1) == 0:

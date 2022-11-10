@@ -53,8 +53,23 @@ class Individual():
             if randint(0, 100) < gene_mutation_rate * 100:
                 self.adn[i] = (self.adn[i] + randint(-1, 1)) % 4
 
-    def extract_partial_valid_path(self, target : tuple[int, int]) -> list[tuple[int, int]]:
-        path = self.compute_complete_path()
+    # Return the path without consecutive duplicates
+    def extract_partial_path(self, target : tuple[int, int]) -> list[tuple[int, int]]:
+        path = self.compute_complete_valid_path()
+
+        # Remove looping parts (duplicate parts) in path
+
+
+      
+
+        # Remove consecutive duplicates
+        path = [path[i] for i in range(len(path)) if i == 0 or path[i] != path[i - 1]]
+
+        # Remove consecutive pairs of duplicates
+        
+        # path = [path[i] for i in range(0, len(path) - 4) if path[i] != path[i + 2] or path[i + 1] != path[i + 3]]
+
+        return path
 
         init_cell = (0, 0)
 
@@ -72,26 +87,35 @@ class Individual():
         
 
     def compute_fitness(self, target : tuple[int, int]):
-        path = self.compute_complete_path()
+        path = self.extract_partial_path(target) # Get the path without consecutive duplicates
 
         # If the ind reached the target
         if target in path:
-            # # Get the shortest path from the initial cell to the target
-            # shortest_path = self.extract_partial_valid_path(target)
+            # Get the path to the target
+            path_to_target = path[path.index(target):]
 
-            # # Fitness is the number of steps to reach the target
-            # self.fitness = shortest_path.index(target)
-            self.fitness = path.index(target)
-            return
+            # If this path is valid
+            if Individual.isPathValid(path_to_target, self.maze):
+                # The fitness is the number of steps to reach the target
+                self.fitness = len(path_to_target) - 1
+            else:
+                # The fitness is the number of steps to reach the target + the number of invalid steps
+                self.fitness = len(path_to_target) - 1 + len([cell for cell in path_to_target if Individual.isPathValid([cell], self.maze) == False])
+        # If the ind didn't reach the target
+        else:
+            # Get the closest cell to the target
+            closest_cell = min(path, key = lambda cell : math.sqrt((cell[0] - target[0]) ** 2 + (cell[1] - target[1]) ** 2))
 
-        # Get the closest cell to the target
-        closest_cell = min(path, key = lambda cell : math.sqrt((cell[0] - target[0]) ** 2 + (cell[1] - target[1]) ** 2))
+            # Fitness is the number of steps to reach the closest cell to the target
+            self.fitness = path.index(closest_cell)
 
-        # Fitness is the number of steps to reach the closest cell to the target
-        self.fitness = path.index(closest_cell)
+            # Fitness is the number of steps to reach the closest cell to the target + the distance to the target
+            self.fitness += math.sqrt((closest_cell[0] - target[0]) ** 2 + (closest_cell[1] - target[1]) ** 2) * 5
 
-        # Fitness is the number of steps to reach the closest cell to the target + the distance to the target
-        self.fitness += math.sqrt((closest_cell[0] - target[0]) ** 2 + (closest_cell[1] - target[1]) ** 2) * 5
+            # Fitness is the number of steps to reach the closest cell to the target + the distance to the target + the number of invalid steps
+            self.fitness += len([cell for cell in path if Individual.isPathValid([cell], self.maze) == False])
+            
+        # print("Fitness : ", self.fitness)
 
         # if target in path:
         #     extracted_path = self.extract_best_path(target)
@@ -150,4 +174,24 @@ class Individual():
 
 
     def compute_complete_valid_path(self) -> list[tuple[int, int]]:
-        return [move for move in self.compute_complete_path() if Individual.isPathValid([move], self.maze)]
+        prev_cell = (0, 0)
+        next_cell = (0, 0)
+        path = [prev_cell]
+
+        for move in self.adn:
+            if move == 0:
+                next_cell = (prev_cell[0] - 1, prev_cell[1])
+            elif move == 1:
+                next_cell = (prev_cell[0] + 1, prev_cell[1])
+            elif move == 2:
+                next_cell = (prev_cell[0], prev_cell[1] - 1)
+            elif move == 3:
+                next_cell = (prev_cell[0], prev_cell[1] + 1)
+
+            if Individual.isPathValid([next_cell], self.maze):
+                path.append(next_cell)
+                prev_cell = next_cell
+            else:
+                path.append(prev_cell)
+
+        return path
