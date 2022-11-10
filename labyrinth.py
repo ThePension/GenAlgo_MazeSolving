@@ -57,17 +57,17 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     
     start_time = time.time() # Start timer - Used to keep track of the elapsed time
 
-    population_size = 50
+    population_size = 100
     # Longest path possible is the number of cells in the grid / 2
     h, w = grid.shape
     adn_size = round(w * h * 2)
     mutation_rate = 0.5 # Probability of mutation for a individual
-    gene_mutation_rate = 0.1 # Probability of mutation for a gene
+    gene_mutation_rate = 0.01 # Probability of mutation for a gene
     mating_rate = 0.5 # Probability of crossover for a pair of individuals
     ellitiste_mutation_rate = 0.1
     gen_count = 0
 
-    population = [Individual.randomIndividual(start_cell[0], start_cell[1], adn_size, grid) for i in range(0, population_size)]
+    population = [Individual.randomIndividual(start_cell, adn_size, grid) for i in range(0, population_size)]
     best_ind = population[0] # Keep track of the best path found for the moment
 
     while(True):
@@ -76,7 +76,11 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
         # Compute the next generation
         #
         # ------------------------------------------
-        ind, gen_count = compute_generation(population, grid, end_cell, mutation_rate, mating_rate, gene_mutation_rate, gen_count)
+        ind, new_population = compute_generation(population, grid, end_cell, mutation_rate, mating_rate, gene_mutation_rate, ellitiste_mutation_rate)
+        
+        gen_count += 1
+        
+        population[:] = new_population
 
         ind.compute_fitness(end_cell)
 
@@ -95,14 +99,15 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
 
     return best_ind.extract_partial_path(end_cell)
 
-def compute_generation(population:list[Individual], grid:np.ndarray, target:tuple, mutation_rate : float, mating_rate : float, gene_mutation_rate : float, ellitiste_mutation_rate : float, gen_count = 0) -> Individual:
-    gen_count += 1
+def compute_generation(population:list[Individual], grid:np.ndarray, target:tuple, mutation_rate : float, mating_rate : float, gene_mutation_rate : float, ellitiste_mutation_rate : float = 0) -> Individual:
     offspring = selection(population, int(len(population) / 2))
 
-    bests = offspring[round(ellitiste_mutation_rate * len(population))]
+    ellitiste_number = round(ellitiste_mutation_rate * len(offspring))
 
-    for ind in offspring:
-        ind.clone()
+    bests = offspring[:ellitiste_number:]
+    offspring = offspring[ellitiste_number::]
+
+    offspring = [ind.clone() for ind in offspring]
 
     for parent1, parent2 in zip(offspring[::2], offspring[1::2]):
         if randint(0, 100) < mating_rate * 100:
@@ -110,39 +115,44 @@ def compute_generation(population:list[Individual], grid:np.ndarray, target:tupl
             offspring.append(child1)
             offspring.append(child2)
         else:
-            offspring.append(parent1)
-            offspring.append(parent2)
+            offspring.append(parent1.clone())
+            offspring.append(parent2.clone())
 
     for ind in offspring:
         if randint(0, 100) < mating_rate * 100:
             ind.mutate(gene_mutation_rate)
             
         ind.compute_fitness(target)
+        print("Fitness: " + str(ind.fitness))
 
-    population[:] = offspring
+    # population[:] = bests + offspring
+    population = bests + offspring
 
     # shuffle the population to improve diversity
-    np.random.shuffle(population)
+    # np.random.shuffle(population)
 
     # Get the 5 best individuals
     bestPaths = selection(population, 5)
 
     [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
 
-    return bestPaths[0].clone(), gen_count # return the best individual
+    return bestPaths[0].clone(), population # return the best individual
     
 
-def selection(population:list[Individual], k : int) -> list[Individual]:
+def selection(population : list[Individual], k : int) -> list[Individual]:
     return sorted(population, key=lambda x: x.fitness, reverse=False)[:k]
 
 def crossover(parent1 : Individual, parent2 : Individual) -> tuple[Individual, Individual]:
     adn_parent1 = parent1.clone().adn
     adn_parent2 = parent2.clone().adn
 
-    crossing_point = (len(adn_parent1) / 2)
+    crossing_point = round(len(adn_parent1) / 2)
 
-    adn_child1 = adn_parent1[crossing_point:] + adn_parent2[:crossing_point]
-    adn_child2 = adn_parent1[crossing_point:] + adn_parent1[:crossing_point]
+    # adn_child1 = adn_parent1[crossing_point:] + adn_parent2[:crossing_point]
+    # adn_child2 = adn_parent1[crossing_point:] + adn_parent1[:crossing_point]
+    
+    adn_child1 = []
+    adn_child2 = []
 
     for i in range(0, len(adn_parent1)):
         if randint(0, 1) == 0:
@@ -152,8 +162,8 @@ def crossover(parent1 : Individual, parent2 : Individual) -> tuple[Individual, I
             adn_child1.append(adn_parent2[i])
             adn_child2.append(adn_parent1[i])
 
-    child1 = Individual(parent1.x, parent1.y, adn_child1)
-    child2 = Individual(parent2.x, parent2.y, adn_child2)
+    child1 = Individual(parent1.init_cell, adn_child1, parent1.maze)
+    child2 = Individual(parent1.init_cell, adn_child2, parent1.maze)
 
     return child1, child2   
 

@@ -4,11 +4,10 @@ import numpy as np
 import math
 
 class Individual():
-    def __init__(self, init_x, init_y, adn = [], maze = [[]]):
+    def __init__(self, init_cell : tuple[int, int], adn = [], maze = [[]]):
         self.adn = adn
-        self.x = init_x
-        self.y = init_y
-        self.fitness = 0
+        self.init_cell = init_cell
+        self.fitness = 10000
         self.maze = maze
         self.target_reached = False
 
@@ -40,38 +39,46 @@ class Individual():
         return nb_wall_hit
 
     @staticmethod
-    def randomIndividual(init_x : int, init_y : int, adn_size : int, maze : np.ndarray):
-        random_adn = [randint(0, 3) for i in range(0, adn_size)]    
+    def randomIndividual(init_cell : tuple[int, int], adn_size : int, maze : np.ndarray):
+        random_adn = [randint(0, 3) for i in range(0, adn_size)] 
 
-        return Individual(init_x, init_y, random_adn, maze)
+        return Individual(init_cell, random_adn, maze)
 
     def clone(self):
-        return Individual(self.x, self.y, deepcopy(self.adn), self.maze)
+        return Individual(self.init_cell, deepcopy(self.adn), self.maze)
 
     def mutate(self, gene_mutation_rate):
+        mutated_adn = deepcopy(self.adn)
+        
         for i in range(0, len(self.adn)):
             if randint(0, 100) < gene_mutation_rate * 100:
-                self.adn[i] = (self.adn[i] + randint(-1, 1)) % 4
+                old_gene = self.adn[i]
+                
+                if randint(0, 1) == 0:
+                    mutated_adn[i] = (old_gene + 1) % 4
+                else:
+                    mutated_adn[i] = (old_gene - 1) % 4
+                
+                # print("Mutation at index ", i, " from ", old_gene, " to ", mutated_adn[i])
+                
+        self.adn = mutated_adn
+        
 
     # Return the path without consecutive duplicates
     def extract_partial_path(self, target : tuple[int, int]) -> list[tuple[int, int]]:
         path = self.compute_complete_valid_path()
 
-        # Remove looping parts (duplicate parts) in path
-
-
-      
-
         # Remove consecutive duplicates
         path = [path[i] for i in range(len(path)) if i == 0 or path[i] != path[i - 1]]
-
+        
+        # If the ind reached the target
+        if target in path:
+            return path[:path.index(target) + 1]
         # Remove consecutive pairs of duplicates
         
         # path = [path[i] for i in range(0, len(path) - 4) if path[i] != path[i + 2] or path[i + 1] != path[i + 3]]
 
         return path
-
-        init_cell = (0, 0)
 
         if target in path:
             # Get the index of the last initial cell in the path (must be before the first target in path)
@@ -88,11 +95,17 @@ class Individual():
 
     def compute_fitness(self, target : tuple[int, int]):
         path = self.extract_partial_path(target) # Get the path without consecutive duplicates
-
+        
+         # Get the closest cell to the target
+        closest_cell = min(path, key = lambda cell : math.sqrt((cell[0] - target[0]) ** 2 + (cell[1] - target[1]) ** 2))
+        self.fitness = math.sqrt((closest_cell[0] - target[0]) ** 2 + (closest_cell[1] - target[1]) ** 2) * 5 + path.index(closest_cell)
+        
+        return
+    
         # If the ind reached the target
         if target in path:
             # Get the path to the target
-            path_to_target = path[path.index(target):]
+            path_to_target = path[:path.index(target)]
 
             # If this path is valid
             if Individual.isPathValid(path_to_target, self.maze):
@@ -153,7 +166,7 @@ class Individual():
 
 
     def compute_complete_path(self):
-        prev_cell = (0, 0)
+        prev_cell =  self.init_cell
         next_cell = (0, 0)
         path = [prev_cell]
 
@@ -174,7 +187,7 @@ class Individual():
 
 
     def compute_complete_valid_path(self) -> list[tuple[int, int]]:
-        prev_cell = (0, 0)
+        prev_cell = self.init_cell
         next_cell = (0, 0)
         path = [prev_cell]
 
