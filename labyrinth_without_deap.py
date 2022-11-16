@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import time
 from random import randint
 from individual import Individual
+from mazegenerator import MazeGenerator
 
 def display_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, solution=None):
     """Display the labyrinth matrix and possibly the solution with matplotlib.
@@ -87,7 +88,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
         if (ind.fitness < best_ind.fitness):
             best_ind = ind
 
-        # print("NPOP : " + str(len(population)) + " | Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness))
+        print("NPOP : " + str(len(population)) + " | Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness))
 
         # ------------------------------------------
         #
@@ -111,7 +112,7 @@ def compute_generation(population:list[Individual], grid:np.ndarray, target:tupl
 
     for parent1, parent2 in zip(offspring[::2], offspring[1::2]):
         if randint(0, 100) < mating_rate * 100:
-            child1, child2 = crossover(parent1, parent2)
+            child1, child2 = crossover(parent1, parent2, target)
             offspring.append(child1)
             offspring.append(child2)
         else:
@@ -132,7 +133,7 @@ def compute_generation(population:list[Individual], grid:np.ndarray, target:tupl
     # Get the 5 best individuals
     bestPaths = selection(population, 5)
 
-    # [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
+    [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
 
     return bestPaths[0].clone(), population # return the best individual
     
@@ -140,7 +141,7 @@ def compute_generation(population:list[Individual], grid:np.ndarray, target:tupl
 def selection(population : list[Individual], k : int) -> list[Individual]:
     return sorted(population, key=lambda x: x.fitness, reverse=False)[:k]
 
-def crossover(parent1 : Individual, parent2 : Individual) -> tuple[Individual, Individual]:
+def crossover(parent1 : Individual, parent2 : Individual, target : tuple[int, int]) -> tuple[Individual, Individual]:
     adn_parent1 = parent1.clone().adn
     adn_parent2 = parent2.clone().adn
 
@@ -163,6 +164,32 @@ def crossover(parent1 : Individual, parent2 : Individual) -> tuple[Individual, I
     #         adn_child1.append(adn_parent2[i])
     #         adn_child2.append(adn_parent1[i])
     # END V2
+
+    # V3
+    # adn_child1 = []
+    # adn_child2 = []
+    # pos1 = 0
+
+    # if len(parent1.extract_partial_path(target)) > len(parent2.extract_partial_path(target)):
+    #     pos1 = len(parent1.extract_partial_path(target))
+    # else:
+    #     pos1 = len(parent2.extract_partial_path(target))
+
+    # print("Pos1 : " + str(pos1))
+
+    # pos2 = randint(0, len(adn_parent1) - pos1) + pos1
+
+    # for i in range(0, pos1 - 1):
+    #     adn_child1[i] = parent1.adn[i]
+    #     adn_child2[i] = parent2.adn[i]
+
+    # for i in range(i, pos2 - 1):
+    #     adn_child1[i] = adn_parent2[i]
+    #     adn_child2[i] = adn_parent1[i]
+
+    # for i in range(i, len(parent1.adn)):
+    #     adn_child1[i] = parent1.adn[i]
+    #     adn_child2[i] = parent2.adn[i]
     
     child1 = Individual(parent1.init_cell, adn_child1, parent1.maze)
     child2 = Individual(parent1.init_cell, adn_child2, parent1.maze)
@@ -180,25 +207,25 @@ def random_maze(w : int, h : int, wall_ratio : float) -> np.ndarray:
 if __name__ == "__main__":
     import numpy as np
 
-    # file = "grid10.npy"
-    # grid = np.load(file)
-    # start = (0, 0)
-    # h = grid.shape[0]
-    # w = grid.shape[1]
-    # end = (h - 1, w - 1)
+    file = "grid10.npy"
+    grid = np.load(file)
+    start = (0, 0)
+    h = grid.shape[0]
+    w = grid.shape[1]
+    end = (h - 1, w - 1)
         
-    # best_path = solve_labyrinth(grid, start, end, 5)
+    best_path = solve_labyrinth(grid, start, end, 10)
 
-    # print(best_path)
+    print(best_path)
     
-    size = 15
-    init_cell = (0, 0)
-    dest_cell = (size - 1, size - 1)
-    time_s = 15
+    # size = 15
+    # init_cell = (1, 1)
+    # dest_cell = (size - 2, size - 2)
+    # time_s = 15
     
-    m = random_maze(size, size, 0.2)
+    # m = MazeGenerator.generate_maze(15, 15)
 
-    path = solve_labyrinth(m, init_cell, dest_cell, time_s)
+    # path = solve_labyrinth(m, init_cell, dest_cell, time_s)
     
-    print("Path length : " + str(len(path)))
-    print(path)
+    # print("Path length : " + str(len(path)))
+    # print(path)
