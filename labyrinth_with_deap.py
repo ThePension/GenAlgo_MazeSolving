@@ -87,14 +87,14 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     
     start_time = time.time() # Start timer - Used to keep track of the elapsed time
 
-    population_size = 50
     # Longest path possible is the number of cells in the grid / 2
     h, w = grid.shape
-    adn_size = round(w * h * 2)
-    mutation_rate = 0.5 # Probability of mutation for a individual
-    gene_mutation_rate = 0.01 # Probability of mutation for a gene
-    mating_rate = 0.5 # Probability of crossover for a pair of individuals
-    ellitiste_mutation_rate = 0.1
+    adn_size = (w + h) * 2
+    population_size =  w + h # int((w + h) * (4 / 3))
+    mutation_rate = 0.7 # Probability of mutation for a individual
+    gene_mutation_rate = 0.1 # Probability of mutation for a gene
+    mating_rate = 0.7 # Probability of crossover for a pair of individuals
+    ellitiste_mutation_rate = 0.01
     gen_count = 0
 
 
@@ -119,10 +119,8 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     population = toolbox.population(n=population_size, adn_size=adn_size)
     best_ind = population[0] # Keep track of the best path found for the moment
 
-    #   best_ind.fitness = compute_fitness(best_ind, init_cell=start_cell, maze=grid, target=end_cell)
-    fit = toolbox.evaluate(best_ind, init_cell=start_cell, maze=grid, target=end_cell)
-    best_ind.fitness.values = fit
-
+    best_ind.fitness.values = toolbox.evaluate(best_ind, init_cell=start_cell, maze=grid, target=end_cell)
+    
     while(True):
         # -----------------------------------------
         #
@@ -142,7 +140,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
         if (ind.fitness.values[0] < best_ind.fitness.values[0]):
             best_ind = toolbox.clone(ind)
 
-        print("NPOP : " + str(len(population)) + " | Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness.values[0]))
+        # print("NPOP : " + str(len(population)) + " | Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness.values[0]))
 
         # ------------------------------------------
         #
@@ -190,7 +188,7 @@ def compute_generation(population:list[Individual], grid:np.ndarray, init_cell :
     # Get the 5 best individuals
     bestPaths = tools.selBest(population, k=5)
 
-    [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
+    # [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
 
     return bestPaths[0], population # return the best individual
 
@@ -222,6 +220,13 @@ def mutate(ind : creator.Individual, gene_mutation_rate : float = 0.01) -> creat
 
 def compute_fitness(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]):
     path = compute_subpath(ind, init_cell, maze, target) # Get the path without consecutive duplicates
+
+    #     # Fitness / calcul du score
+    # if target in path:
+    #     return (path.index(target),)
+    # else:
+    #     return (len(ind) + (abs(target[0] - path[-1][0]) + abs(target[1] - path[-1][1])),)
+
     fitness = None
 
     # If the ind reached the target
@@ -245,6 +250,38 @@ def compute_fitness(ind : creator.Individual, init_cell : tuple[int, int], maze 
 
 # ------------------------------------------
 #
+# 
+#
+# ------------------------------------------
+
+def isPathValid(path, maze):
+    prev_cx, prev_cy = None, None
+
+    # print("Path : " + str(path))
+
+    for cx, cy in path:
+        # Check up and left boundaries
+        if cx < 0 or cy < 0:
+            return False
+        
+        # Check down and right boundaries
+        if cx >= len(maze) or cy >= len(maze[0]):
+            return False
+
+        # Check if it has hit a wall
+        if maze[cx][cy] == 1:
+            return False
+
+        # Check if it's returning back (loop)
+        if cx == prev_cx and cy == prev_cy:
+            return False
+
+        prev_cx, prev_cy = cx, cy
+        
+    return True
+
+# ------------------------------------------
+#
 # Compute chromosome function - Return the path based on the genes in the chromosome
 # - Remove consecutive duplicates
 # - If the ind reached the target before the end of the chromosome, return this subpath
@@ -253,9 +290,8 @@ def compute_fitness(ind : creator.Individual, init_cell : tuple[int, int], maze 
 #
 # ------------------------------------------
 
-# Return the path without consecutive duplicates
 def compute_subpath(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]) -> list[tuple[int, int]]:
-    path = compute_complete_valid_path(ind, init_cell, maze)
+    path = compute_complete_valid_path(ind, init_cell, maze, target)
 
     # Remove consecutive duplicates
     path = [path[i] for i in range(len(path)) if i == 0 or path[i] != path[i - 1]]
@@ -270,31 +306,79 @@ def compute_subpath(ind : creator.Individual, init_cell : tuple[int, int], maze 
 
 # ------------------------------------------
 #
-# Compute chromosome function - Return the path based on the genes in the chromosome
-# - Does not apply gene that leads to an invalid path (wall, out of bounds)
-# - The path may contain consecutive duplicates, of loops
+#   Get the move, as a tuple[int, int],
+#   based on the gene value, described below
+#
+#   0 : Move left   (-1, +0)
+#   1 : Move right  (+1, +0)
+#   2 : Move down   (+0, -1)
+#   3 : Move up     (+0, +1)
+#
 # ------------------------------------------
 
-def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray) -> list[tuple[int, int]]:
+def getMoveFromGene(gene : int) -> tuple[int, int]:
+    if gene == 0:
+        return (-1, 0)
+    elif gene == 1:
+        return (1, 0)
+    elif gene == 2:
+        return (0, -1)
+    elif gene == 3:
+        return (0, 1)
+    else:
+        raise Exception("Invalid gene")
+
+# ------------------------------------------
+#
+# Compute chromosome function - Return the path based on the genes in the chromosome
+# - Does not apply gene that leads to an invalid path (wall, out of bounds)
+# - The path may contain consecutive duplicates, or loops
+# - Tries the prevent the ind from going back to the previous cell
+# - Tries to prevent the ind from reaching dead ends
+#
+# ------------------------------------------
+
+def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]) -> list[tuple[int, int]]:
+    maze = maze.copy()
     prev_cell = init_cell
+    current_cell = init_cell
     next_cell = (0, 0)
-    path = [prev_cell]
+    path = [init_cell]
 
-    for move in ind:
-        if move == 0:
-            next_cell = (prev_cell[0] - 1, prev_cell[1])
-        elif move == 1:
-            next_cell = (prev_cell[0] + 1, prev_cell[1])
-        elif move == 2:
-            next_cell = (prev_cell[0], prev_cell[1] - 1)
-        elif move == 3:
-            next_cell = (prev_cell[0], prev_cell[1] + 1)
+    for gene in ind:
+        is_current_cell_in_deadend = True
 
-        if Individual.isPathValid([next_cell], maze):
-            path.append(next_cell)
-            prev_cell = next_cell
-        else:
+        for i in range(0, 4):
+            move_x, move_y = getMoveFromGene((gene + i) % 4)
+            # print("\nmove_x : " + str(move_x) + " move_y : " + str(move_y))
+
+            next_cell = (current_cell[0] + move_x, current_cell[1] + move_y)
+            # print("Leads from (" + str(current_cell[0]) + ", " + str(current_cell[1]) + ") to (" +str(next_cell[0]) + ", " + str(next_cell[1]) + ")")
+            
+            if isPathValid([prev_cell, next_cell], maze):
+                path.append(next_cell)
+
+                # print("Valid move")
+
+                if next_cell == target:
+                    return path
+
+                prev_cell = current_cell
+                current_cell = next_cell
+                is_current_cell_in_deadend = False
+                break # Break the nested loop
+            # else:
+                # print("Not valid")
+
+        # If there is no move available, the current cell is in a dead end (cul de sac)
+        if is_current_cell_in_deadend:
+            # print("Dead end")
+            # Prevent returning to this dead end by adding a wall
+            maze[current_cell[0]][current_cell[1]] = 1
             path.append(prev_cell)
+            current_cell = prev_cell
+            prev_cell = current_cell
+
 
     return path
 
@@ -309,9 +393,11 @@ if __name__ == "__main__":
     w = grid.shape[1]
     end = (h - 1, w - 1)
         
-    best_path = solve_labyrinth(grid, start, end, 10)
+    best_path = solve_labyrinth(grid, start, end, 3)
 
+    print("Solution found in " + str(len(best_path) - 1) + " steps")
     print(best_path)
+
     
     # size = 15
     # init_cell = (1, 1)

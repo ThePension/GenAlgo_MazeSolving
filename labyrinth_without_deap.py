@@ -58,14 +58,14 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     
     start_time = time.time() # Start timer - Used to keep track of the elapsed time
 
-    population_size = 50
     # Longest path possible is the number of cells in the grid / 2
     h, w = grid.shape
-    adn_size = round(w * h * 2)
-    mutation_rate = 0.5 # Probability of mutation for a individual
-    gene_mutation_rate = 0.01 # Probability of mutation for a gene
-    mating_rate = 0.5 # Probability of crossover for a pair of individuals
-    ellitiste_mutation_rate = 0.1
+    adn_size = (w + h) * 2
+    population_size =  w + h # int((w + h) * (4 / 3))
+    mutation_rate = 0.7 # Probability of mutation for a individual
+    gene_mutation_rate = 0.1 # Probability of mutation for a gene
+    mating_rate = 0.7 # Probability of crossover for a pair of individuals
+    ellitiste_mutation_rate = 0.01
     gen_count = 0
 
     population = [Individual.randomIndividual(start_cell, adn_size, grid) for i in range(0, population_size)]
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     w = grid.shape[1]
     end = (h - 1, w - 1)
         
-    best_path = solve_labyrinth(grid, start, end, 10)
+    best_path = solve_labyrinth(grid, start, end, 3)
 
     print(best_path)
     
