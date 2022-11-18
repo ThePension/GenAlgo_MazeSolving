@@ -89,11 +89,11 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
 
     # Longest path possible is the number of cells in the grid / 2
     h, w = grid.shape
-    adn_size = (w + h) * 2
+    adn_size = int((w * h) / 2)
     population_size =  w + h # int((w + h) * (4 / 3))
-    mutation_rate = 0.7 # Probability of mutation for a individual
+    mutation_rate = 0.8 # Probability of mutation for a individual
     gene_mutation_rate = 0.1 # Probability of mutation for a gene
-    mating_rate = 0.7 # Probability of crossover for a pair of individuals
+    mating_rate = 0.5 # Probability of crossover for a pair of individuals
     ellitiste_mutation_rate = 0.01
     gen_count = 0
 
@@ -334,7 +334,7 @@ def getMoveFromGene(gene : int) -> tuple[int, int]:
 # - Does not apply gene that leads to an invalid path (wall, out of bounds)
 # - The path may contain consecutive duplicates, or loops
 # - Tries the prevent the ind from going back to the previous cell
-# - Tries to prevent the ind from reaching dead ends
+# - Tries to prevent the ind from reaching dead ends (cul de sac)
 #
 # ------------------------------------------
 
@@ -379,7 +379,6 @@ def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int,
             current_cell = prev_cell
             prev_cell = current_cell
 
-
     return path
 
 
@@ -393,7 +392,7 @@ if __name__ == "__main__":
     w = grid.shape[1]
     end = (h - 1, w - 1)
         
-    best_path = solve_labyrinth(grid, start, end, 3)
+    best_path = solve_labyrinth(grid, start, end, 1)
 
     print("Solution found in " + str(len(best_path) - 1) + " steps")
     print(best_path)

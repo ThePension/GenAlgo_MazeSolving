@@ -116,6 +116,8 @@ def solve_labyrinth(grid, start_cell, end_cell, max_time_s):
         t2 = time.perf_counter() - t1
         remainingTime -= t2
 
+        # print("Best fitness: {}".format(hallOfFame[0].fitness.values[0]))
+
     # Retourne le path du meilleur jamais trouver
     return computePath(grid, start_cell, end_cell, hallOfFame[0])
 
@@ -214,6 +216,6 @@ if __name__ == '__main__':
     w = grid.shape[1]
     end = (h - 1, w - 1)
 
-    solution = solve_labyrinth(grid, start, end, 3)
+    solution = solve_labyrinth(grid, start, end, 1)
     print("Solution found in " + str(len(solution) - 1) + " steps")
     print(solution)

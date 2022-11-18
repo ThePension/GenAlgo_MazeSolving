@@ -13,8 +13,8 @@ class MazeGenerator():
     #
     # Return a np.array of size (width, height),
     # representing a maze, where
-    #           0 = wall
-    #           1 = empty cell (path)
+    #           1 = wall
+    #           0 = empty cell (path)
     #
     # ------------------------------------------
     
