@@ -1,10 +1,12 @@
 """Main class for solving labyrinths with genetic algorithms.
 
 Tested Python 3.9+
-"""
 
-# Sauces :
-# - https://www.diva-portal.org/smash/get/diva2:927325/FULLTEXT01.pdf
+Author: Aubert Nicolas
+Lesson: 
+Date:   24.11.2022
+
+"""
 
 from copy import deepcopy
 import numpy as np
@@ -115,6 +117,8 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     ellitiste_mutation_rate = 0.01
     gen_count = 0
 
+    grid[start_cell[0]][start_cell[1]] = 0
+    grid[end_cell[0]][end_cell[1]] = 0
 
     # ------------------------------------------
     #
@@ -477,12 +481,12 @@ def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int,
 if __name__ == "__main__":
     import numpy as np
 
-    file = "grid10.npy"
+    file = "realGrid30.npy"
     grid = np.load(file)
-    start = (0, 0)
+    start = (1, 1)
     h = grid.shape[0]
     w = grid.shape[1]
-    end = (h - 1, w - 1)
+    end = (h - 2, w - 2)
         
     best_path = solve_labyrinth(grid, start, end, 1)
 
