@@ -27,17 +27,35 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 
 creator.create("Individual", list, fitness=creator.FitnessMin)
 
+
 # ------------------------------------------
 #
 # Initialize population
 #
 # ------------------------------------------
 
-def random_individual(adn_size : int):
+def random_individual(adn_size : int) -> creator.Individual:
+    """Create a individual with a random chromosome
+
+    Args:
+        adn_size (int): The size of the chromosome
+
+    Returns:
+        creator.Individual: A new random individual
+    """
     random_adn = [randint(0, 3) for i in range(0, adn_size)]
     return creator.Individual(random_adn)
 
-def initialize_population(adn_size : int, n : int):
+def initialize_population(adn_size : int, n : int) -> list[creator.Individual]:
+    """Create a population of random individuals
+
+    Args:
+        adn_size (int): The size of the chromosome
+        n (int): The number of individuals in the population
+
+    Returns:
+        list[creator.Individual]: The population, as a list of individuals
+    """
     return [random_individual(adn_size) for i in range(0, n)]
 
 
@@ -112,7 +130,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
 
     # ------------------------------------------
     #
-    # Initialization
+    # Initialize population
     #
     # ------------------------------------------
     
@@ -122,64 +140,74 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     best_ind.fitness.values = toolbox.evaluate(best_ind, init_cell=start_cell, maze=grid, target=end_cell)
     
     while(True):
+        # Check if the time limit has been reached
+        if time.time() - start_time >= max_time_s - 0.5:
+            break
+        
         # -----------------------------------------
         #
         # Compute the next generation
         #
         # ------------------------------------------
 
-        ind, new_population = compute_generation(population, grid, start_cell, end_cell, mutation_rate, mating_rate, gene_mutation_rate, ellitiste_mutation_rate)
+        ind, new_population = compute_generation(population, mutation_rate, mating_rate, ellitiste_mutation_rate)
         
         gen_count += 1
         
         population[:] = new_population
 
-        # fit = compute_fitness(ind, init_cell=start_cell, maze=grid, target=end_cell)
-        # ind.fitness = fit
-
+        # If the best individual of this generation is better than the best individual found so far, update it
         if (ind.fitness.values[0] < best_ind.fitness.values[0]):
             best_ind = toolbox.clone(ind)
 
-        # print("NPOP : " + str(len(population)) + " | Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness.values[0]))
-
-        # ------------------------------------------
-        #
-        # Check if the algorithm has to stop
-        #
-        # ------------------------------------------
-        if time.time() - start_time >= max_time_s:
-            break
-
     return compute_subpath(best_ind, start_cell, grid, end_cell)
 
-def compute_generation(population:list[Individual], grid:np.ndarray, init_cell : tuple[int, int], target:tuple, mutation_rate : float, mating_rate : float, gene_mutation_rate : float, ellitiste_mutation_rate : float) -> Individual:
+def compute_generation(population : list[Individual], mutation_rate : float, mating_rate : float, ellitiste_mutation_rate : float) -> Individual:
+    """Compute one generation of the genetic algorithm
+
+    Args:
+        population (list[Individual]): population of individuals
+        mutation_rate (float): mutation rate in percentage
+        mating_rate (float): mating rate in percentage
+        ellitiste_mutation_rate (float): ellitiste mutation rate in percentage
+
+    Returns:
+        Individual: the best individual of the generation
+    """
+    # Compute the number of individuals to keep for the next generation (won't be mutated or mated)
     ellitiste_number = round(ellitiste_mutation_rate * len(population))
 
+    # Extract the best individuals from the population
     bests = population[:ellitiste_number:]
     population = population[ellitiste_number::]
     
+    # Apply selection
     offspring = toolbox.select(population, len(population))
 
+    # Clone the selected individuals
     offspring = [toolbox.clone(ind) for ind in offspring]
-
+    
+    # Apply crossover (mating)
     for child1, child2 in zip(offspring[::2], offspring[1::2]):
         if randint(0, 100) < mating_rate * 100:
             toolbox.crossover(child1, child2)
             del child1.fitness.values
             del child2.fitness.values
 
+    # Apply mutation
     for mutant in offspring:
         if randint(0, 100) < mutation_rate * 100:
             toolbox.mutate(mutant)
             del mutant.fitness.values
-            
+        
+    # Compute fitness for the new individuals    
     invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-    # fitnesses = [compute_fitness(ind, init_cell=init_cell, maze=grid, target=target) for ind in offspring if not ind.fitness.valid]
     fitnesses = map(toolbox.evaluate, invalid_ind)
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
+    # Add the best individuals to the new population
     population = bests + offspring
 
     # shuffle the population to improve diversity
@@ -187,8 +215,6 @@ def compute_generation(population:list[Individual], grid:np.ndarray, init_cell :
 
     # Get the 5 best individuals
     bestPaths = tools.selBest(population, k=5)
-
-    # [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
 
     return bestPaths[0], population # return the best individual
 
@@ -199,7 +225,17 @@ def compute_generation(population:list[Individual], grid:np.ndarray, init_cell :
 #
 # ------------------------------------------
 
-def mutate(ind : creator.Individual, gene_mutation_rate : float = 0.01) -> creator.Individual:   
+def mutate(ind : creator.Individual, gene_mutation_rate : float = 0.01) -> creator.Individual:
+    """Mutate the chromosome of an individual by randomly changing genes based on the mutation rate
+
+    Args:
+        ind (creator.Individual): Individual to mutate
+        gene_mutation_rate (float, optional): Mutation rate in percentage. Defaults to 0.01.
+
+    Returns:
+        creator.Individual: The individual with the mutated chromosome
+    """
+    # For each gene in the individual
     for i in range(0, len(ind)):
         if randint(0, 100) < gene_mutation_rate * 100:
             old_gene = ind[i]
@@ -219,13 +255,19 @@ def mutate(ind : creator.Individual, gene_mutation_rate : float = 0.01) -> creat
 # ------------------------------------------
 
 def compute_fitness(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]):
-    path = compute_subpath(ind, init_cell, maze, target) # Get the path without consecutive duplicates
+    """Return the fitness of an individual
 
-    #     # Fitness / calcul du score
-    # if target in path:
-    #     return (path.index(target),)
-    # else:
-    #     return (len(ind) + (abs(target[0] - path[-1][0]) + abs(target[1] - path[-1][1])),)
+    Args:
+        ind (creator.Individual): The individual to evaluate
+        init_cell (tuple[int, int]): The starting cell
+        maze (np.ndarray): The maze
+        target (tuple[int, int]): The cell to reach
+
+    Returns:
+        tuple[float,]: The fitness of the individual (closer to 0 is better)
+    """
+    # Get the path without consecutive duplicates
+    path = compute_subpath(ind, init_cell, maze, target)
 
     fitness = None
 
@@ -250,14 +292,24 @@ def compute_fitness(ind : creator.Individual, init_cell : tuple[int, int], maze 
 
 # ------------------------------------------
 #
-# 
+# Return if a path is valid. A path is valid if :
+# - It doesn't go out of the maze
+# - It doesn't go through a wall
+# - It doesn't return to a cell it already visited
 #
 # ------------------------------------------
 
-def isPathValid(path, maze):
-    prev_cx, prev_cy = None, None
+def isPathValid(path : list[tuple[int, int]], maze : np.ndarray) -> bool:
+    """Check if a path is valid
 
-    # print("Path : " + str(path))
+    Args:
+        path (list[tuple[int, int]]): The path to evaluate
+        maze (np.ndarray): The maze
+
+    Returns:
+        bool: True if the path is valid, otherwise False
+    """
+    prev_cx, prev_cy = None, None
 
     for cx, cy in path:
         # Check up and left boundaries
@@ -291,6 +343,21 @@ def isPathValid(path, maze):
 # ------------------------------------------
 
 def compute_subpath(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]) -> list[tuple[int, int]]:
+    """Compute chromosome function - Return the path based on the genes in the chromosome
+        - Remove consecutive duplicates
+        - If the ind reached the target before the end of the chromosome, return this subpath
+        - If the ind did not reach the target before the end of the chromosome,
+            return the path leading to the closest (euclid distance) cell of the target
+
+    Args:
+        ind (creator.Individual): The individual to compute the path from
+        init_cell (tuple[int, int]): The starting cell
+        maze (np.ndarray): The maze
+        target (tuple[int, int]): The cell to reach
+
+    Returns:
+        list[tuple[int, int]]: List of cells positions representing the path followed by the individual
+    """
     path = compute_complete_valid_path(ind, init_cell, maze, target)
 
     # Remove consecutive duplicates
@@ -317,6 +384,21 @@ def compute_subpath(ind : creator.Individual, init_cell : tuple[int, int], maze 
 # ------------------------------------------
 
 def getMoveFromGene(gene : int) -> tuple[int, int]:
+    """Get the move, as a tuple[int, int], based on the gene value, described below
+        0 : Move left   (-1, +0)
+        1 : Move right  (+1, +0)
+        2 : Move down   (+0, -1)
+        3 : Move up     (+0, +1)
+
+    Args:
+        gene (int): Number that belongs to {0, 1, 2, 3}
+
+    Raises:
+        Exception: If the gene is invalid
+
+    Returns:
+        tuple[int, int]: The move, based on the gene
+    """
     if gene == 0:
         return (-1, 0)
     elif gene == 1:
@@ -339,6 +421,20 @@ def getMoveFromGene(gene : int) -> tuple[int, int]:
 # ------------------------------------------
 
 def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]) -> list[tuple[int, int]]:
+    """Compute chromosome function - Return the complete path based on the genes in the chromosome
+        - Does not apply gene that leads to an invalid path (wall, out of bounds)
+        - The path may contain consecutive duplicates, or loops
+        - Tries the prevent the ind from going back to the previous cell
+        - Tries to prevent the ind from reaching dead ends (cul de sac)
+    Args:
+        ind (creator.Individual): The individual to compute the path from
+        init_cell (tuple[int, int]): The starting cell
+        maze (np.ndarray): The maze
+        target (tuple[int, int]): The cell to reach
+
+    Returns:
+        list[tuple[int, int]]: List of cells positions representing the path followed by the individual
+    """
     maze = maze.copy()
     prev_cell = init_cell
     current_cell = init_cell
@@ -350,29 +446,25 @@ def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int,
 
         for i in range(0, 4):
             move_x, move_y = getMoveFromGene((gene + i) % 4)
-            # print("\nmove_x : " + str(move_x) + " move_y : " + str(move_y))
 
             next_cell = (current_cell[0] + move_x, current_cell[1] + move_y)
-            # print("Leads from (" + str(current_cell[0]) + ", " + str(current_cell[1]) + ") to (" +str(next_cell[0]) + ", " + str(next_cell[1]) + ")")
-            
+
             if isPathValid([prev_cell, next_cell], maze):
                 path.append(next_cell)
-
-                # print("Valid move")
 
                 if next_cell == target:
                     return path
 
                 prev_cell = current_cell
                 current_cell = next_cell
+                
                 is_current_cell_in_deadend = False
-                break # Break the nested loop
-            # else:
-                # print("Not valid")
+                
+                # Break the nested loop
+                break 
 
         # If there is no move available, the current cell is in a dead end (cul de sac)
         if is_current_cell_in_deadend:
-            # print("Dead end")
             # Prevent returning to this dead end by adding a wall
             maze[current_cell[0]][current_cell[1]] = 1
             path.append(prev_cell)

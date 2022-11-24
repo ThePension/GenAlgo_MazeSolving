@@ -88,7 +88,7 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
         if (ind.fitness < best_ind.fitness):
             best_ind = ind
 
-        print("NPOP : " + str(len(population)) + " | Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness))
+        # print("NPOP : " + str(len(population)) + " | Generation: " + str(gen_count) + " - Best path fitness: " + str(best_ind.fitness))
 
         # ------------------------------------------
         #
@@ -133,7 +133,7 @@ def compute_generation(population:list[Individual], grid:np.ndarray, target:tupl
     # Get the 5 best individuals
     bestPaths = selection(population, 5)
 
-    [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
+    # [print("Best path fitness in this gen : " + str(ind.fitness)) for ind in bestPaths]
 
     return bestPaths[0].clone(), population # return the best individual
     
