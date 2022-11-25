@@ -3,19 +3,17 @@
 Tested Python 3.9+
 
 Author: Aubert Nicolas
-Lesson: 
+Lesson: 3250.3 Intelligence artificielle I
 Date:   24.11.2022
 
 """
 
-from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 import time
 from random import randint
 from individual import Individual
-from mazegenerator import MazeGenerator
-from deap import base, creator, tools, algorithms
+from deap import base, creator, tools
 import math
 
 # ------------------------------------------
@@ -107,14 +105,13 @@ def solve_labyrinth(grid:np.ndarray, start_cell:tuple, end_cell:tuple, max_time_
     
     start_time = time.time() # Start timer - Used to keep track of the elapsed time
 
-    # Longest path possible is the number of cells in the grid / 2
     h, w = grid.shape
-    adn_size = int((w * h) / 2)
-    population_size =  w + h # int((w + h) * (4 / 3))
+    adn_size = int((w * h) / 2) # Longest path possible is the number of cells in the grid / 2
+    population_size =  w + h
     mutation_rate = 0.8 # Probability of mutation for a individual
     gene_mutation_rate = 0.1 # Probability of mutation for a gene
     mating_rate = 0.5 # Probability of crossover for a pair of individuals
-    ellitiste_mutation_rate = 0.01
+    ellitiste_mutation_rate = 0.01 # Percentage of individuals that will be mutated or crossed over
     gen_count = 0
 
     grid[start_cell[0]][start_cell[1]] = 0
@@ -223,12 +220,6 @@ def compute_generation(population : list[Individual], mutation_rate : float, mat
     return bestPaths[0], population # return the best individual
 
 
-# ------------------------------------------
-#
-# Mutation function
-#
-# ------------------------------------------
-
 def mutate(ind : creator.Individual, gene_mutation_rate : float = 0.01) -> creator.Individual:
     """Mutate the chromosome of an individual by randomly changing genes based on the mutation rate
 
@@ -251,12 +242,6 @@ def mutate(ind : creator.Individual, gene_mutation_rate : float = 0.01) -> creat
             
     return (creator.Individual(ind),)
 
-
-# ------------------------------------------
-#
-# Fitness computation function
-#
-# ------------------------------------------
 
 def compute_fitness(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]):
     """Return the fitness of an individual
@@ -294,15 +279,6 @@ def compute_fitness(ind : creator.Individual, init_cell : tuple[int, int], maze 
     return (fitness,) # Must be a tuple
  
 
-# ------------------------------------------
-#
-# Return if a path is valid. A path is valid if :
-# - It doesn't go out of the maze
-# - It doesn't go through a wall
-# - It doesn't return to a cell it already visited
-#
-# ------------------------------------------
-
 def isPathValid(path : list[tuple[int, int]], maze : np.ndarray) -> bool:
     """Check if a path is valid
 
@@ -336,15 +312,6 @@ def isPathValid(path : list[tuple[int, int]], maze : np.ndarray) -> bool:
         
     return True
 
-# ------------------------------------------
-#
-# Compute chromosome function - Return the path based on the genes in the chromosome
-# - Remove consecutive duplicates
-# - If the ind reached the target before the end of the chromosome, return this subpath
-# - If the ind did not reach the target before the end of the chromosome,
-#   return the path leading to the closest (euclid distance) cell of the target
-#
-# ------------------------------------------
 
 def compute_subpath(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]) -> list[tuple[int, int]]:
     """Compute chromosome function - Return the path based on the genes in the chromosome
@@ -375,17 +342,6 @@ def compute_subpath(ind : creator.Individual, init_cell : tuple[int, int], maze 
 
     return path[:path.index(closest_cell) + 1]
 
-# ------------------------------------------
-#
-#   Get the move, as a tuple[int, int],
-#   based on the gene value, described below
-#
-#   0 : Move left   (-1, +0)
-#   1 : Move right  (+1, +0)
-#   2 : Move down   (+0, -1)
-#   3 : Move up     (+0, +1)
-#
-# ------------------------------------------
 
 def getMoveFromGene(gene : int) -> tuple[int, int]:
     """Get the move, as a tuple[int, int], based on the gene value, described below
@@ -414,15 +370,6 @@ def getMoveFromGene(gene : int) -> tuple[int, int]:
     else:
         raise Exception("Invalid gene")
 
-# ------------------------------------------
-#
-# Compute chromosome function - Return the path based on the genes in the chromosome
-# - Does not apply gene that leads to an invalid path (wall, out of bounds)
-# - The path may contain consecutive duplicates, or loops
-# - Tries the prevent the ind from going back to the previous cell
-# - Tries to prevent the ind from reaching dead ends (cul de sac)
-#
-# ------------------------------------------
 
 def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int, int], maze : np.ndarray, target : tuple[int, int]) -> list[tuple[int, int]]:
     """Compute chromosome function - Return the complete path based on the genes in the chromosome
@@ -476,32 +423,29 @@ def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int,
             prev_cell = current_cell
 
     return path
-
-
-if __name__ == "__main__":
     import numpy as np
 
-    file = "realGrid30.npy"
-    grid = np.load(file)
-    start = (1, 1)
-    h = grid.shape[0]
-    w = grid.shape[1]
-    end = (h - 2, w - 2)
+    # fie = "realGrid30.npy"
+    # grid = np.load(file)
+    # start = (1, 1)
+    # h = grid.shape[0]
+    # w = grid.shape[1]
+    # end = (hl - 2, w - 2)
         
-    best_path = solve_labyrinth(grid, start, end, 1)
+    # best_path = solve_labyrinth(grid, start, end, 1)
 
-    print("Solution found in " + str(len(best_path) - 1) + " steps")
-    print(best_path)
+    # print("Solution found in " + str(len(best_path) - 1) + " steps")
+    # print(best_path)
 
     
-    # size = 15
-    # init_cell = (1, 1)
-    # dest_cell = (size - 2, size - 2)
-    # time_s = 15
+    size = 15
+    init_cell = (1, 1)
+    dest_cell = (size - 2, size - 2)
+    time_s = 15
     
-    # m = MazeGenerator.generate_maze(15, 15)
+    m = MazeGenerator.generate_maze(15, 15)
 
-    # path = solve_labyrinth(m, init_cell, dest_cell, time_s)
+    path = solve_labyrinth(m, init_cell, dest_cell, time_s)
     
-    # print("Path length : " + str(len(path)))
-    # print(path)
+    print("Path length : " + str(len(path)))
+    print(path)
