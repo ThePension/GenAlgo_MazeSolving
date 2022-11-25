@@ -338,8 +338,10 @@ def compute_subpath(ind : creator.Individual, init_cell : tuple[int, int], maze 
     if target in path:
         return path[:path.index(target) + 1]
     
+    # Get the closest cell to the target that is in the path
     closest_cell = min(path, key = lambda cell : math.sqrt((cell[0] - target[0]) ** 2 + (cell[1] - target[1]) ** 2))
 
+    # Return the path leading to the closest cell
     return path[:path.index(closest_cell) + 1]
 
 
@@ -386,26 +388,37 @@ def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int,
     Returns:
         list[tuple[int, int]]: List of cells positions representing the path followed by the individual
     """
-    maze = maze.copy()
-    prev_cell = init_cell
+    maze = maze.copy() # Copy the maze to avoid modifying it for other individuals
+    # Keep track of the previous cell, to prevent the ind from going back to it
+    prev_cell = init_cell 
+
+    # Keep track of the current move, to prevent the ind from reaching dead ends
     current_cell = init_cell
     next_cell = (0, 0)
+
+    # Keep track of the path
     path = [init_cell]
 
     for gene in ind:
         is_current_cell_in_deadend = True
 
-        for i in range(0, 4):
+        for i in range(0, 4): # Try all 4 moves
             move_x, move_y = getMoveFromGene((gene + i) % 4)
 
+            # Compute the next cell
             next_cell = (current_cell[0] + move_x, current_cell[1] + move_y)
 
+            # If the next cell is valid
             if isPathValid([prev_cell, next_cell], maze):
+                # Add the next cell to the path
                 path.append(next_cell)
 
+                # If the ind reached the target
                 if next_cell == target:
+                    # Return the current path
                     return path
 
+                # Update the previous and current cell
                 prev_cell = current_cell
                 current_cell = next_cell
                 
@@ -419,33 +432,9 @@ def compute_complete_valid_path(ind : creator.Individual, init_cell : tuple[int,
             # Prevent returning to this dead end by adding a wall
             maze[current_cell[0]][current_cell[1]] = 1
             path.append(prev_cell)
+
+            # Update the previous and current cell
             current_cell = prev_cell
             prev_cell = current_cell
 
     return path
-    import numpy as np
-
-    # fie = "realGrid30.npy"
-    # grid = np.load(file)
-    # start = (1, 1)
-    # h = grid.shape[0]
-    # w = grid.shape[1]
-    # end = (hl - 2, w - 2)
-        
-    # best_path = solve_labyrinth(grid, start, end, 1)
-
-    # print("Solution found in " + str(len(best_path) - 1) + " steps")
-    # print(best_path)
-
-    
-    size = 15
-    init_cell = (1, 1)
-    dest_cell = (size - 2, size - 2)
-    time_s = 15
-    
-    m = MazeGenerator.generate_maze(15, 15)
-
-    path = solve_labyrinth(m, init_cell, dest_cell, time_s)
-    
-    print("Path length : " + str(len(path)))
-    print(path)
