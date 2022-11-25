@@ -1,5 +1,7 @@
 # GenAlgo_MazeSolving
 
+Des explications plus approfondies ainsi que des tests sont disponibles dans le rapport : https://github.com/ThePension/GenAlgo_MazeSolving/blob/main/doc/TP4_Aubert_Report.pdf
+
 ## Fonctionnement de l'algorithme génétique
 ### **Définition d'un gène**
 Un gène peut prendre les 4 valeurs suivantes :
